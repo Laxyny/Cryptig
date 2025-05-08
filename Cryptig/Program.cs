@@ -1,17 +1,43 @@
+using System;
+using System.Windows.Forms;
+using Cryptig.Core;
+
 namespace Cryptig
 {
-    internal static class Program
+    static class Program
     {
-        /// <summary>
-        ///  The main entry point for the application.
-        /// </summary>
         [STAThread]
         static void Main()
         {
-            // To customize application configuration such as set high DPI settings or default font,
-            // see https://aka.ms/applicationconfiguration.
-            ApplicationConfiguration.Initialize();
-            Application.Run(new Form1());
+            Application.EnableVisualStyles();
+            Application.SetCompatibleTextRenderingDefault(false);
+
+            while (true)
+            {
+                LoginForm login = new LoginForm();
+                if (login.ShowDialog() != DialogResult.OK)
+                    break;
+
+                string path = $"vault_{login.EnteredUsername}.mistig";
+
+                try
+                {
+                    if (!File.Exists(path))
+                        throw new Exception("Vault not found.");
+
+                    var vault = MistigVault.Load(path, login.EnteredPassword);
+                    if (vault == null)
+                        throw new Exception("Vault is null.");
+
+                    Application.Run(new Form1(vault, login.EnteredUsername, login.EnteredPassword));
+                    break;
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show("Invalid username or password.\n\n" + ex.Message);
+                }
+            }
+
         }
     }
 }
