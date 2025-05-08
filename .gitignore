@@ -1,0 +1,6 @@
+*.cache
+/Cryptig/obj
+/Cryptig.Core/bin
+/Cryptig.Core/obj
+/Cryptig/.vs
+/Cryptig/bin

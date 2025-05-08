@@ -1,0 +1,31 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.13.35931.197 d17.13
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Cryptig", "Cryptig.csproj", "{21A4F79C-251F-4AEC-95A9-48D17A4E5799}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Cryptig.Core", "..\Cryptig.Core\Cryptig.Core.csproj", "{A1953EC0-5988-46E5-8E45-6248103122A7}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{21A4F79C-251F-4AEC-95A9-48D17A4E5799}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{21A4F79C-251F-4AEC-95A9-48D17A4E5799}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{21A4F79C-251F-4AEC-95A9-48D17A4E5799}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{21A4F79C-251F-4AEC-95A9-48D17A4E5799}.Release|Any CPU.Build.0 = Release|Any CPU
+		{A1953EC0-5988-46E5-8E45-6248103122A7}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A1953EC0-5988-46E5-8E45-6248103122A7}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A1953EC0-5988-46E5-8E45-6248103122A7}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A1953EC0-5988-46E5-8E45-6248103122A7}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {A428DA88-6E44-4662-9393-001B621D8CBF}
+	EndGlobalSection
+EndGlobal
