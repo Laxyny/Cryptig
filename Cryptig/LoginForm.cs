@@ -10,6 +10,11 @@
         public string EnteredUsername { get; private set; } = string.Empty;
         public string EnteredPassword { get; private set; } = string.Empty;
 
+        private static readonly string LastUserFile = Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+            "Cryptig", "lastuser.txt"
+        );
+
         public LoginForm()
         {
             Text = "Login";
@@ -35,12 +40,15 @@
             Controls.AddRange(new Control[] { lblUser, txtUsername, lblPass, txtPassword, btnLogin, btnCreate });
 
             AcceptButton = btnLogin;
+            LoadLastUsername();
         }
 
         private void BtnLogin_Click(object sender, EventArgs e)
         {
             EnteredUsername = txtUsername.Text.Trim();
             EnteredPassword = txtPassword.Text;
+
+            SaveLastUsername(EnteredUsername);
 
             if (string.IsNullOrEmpty(EnteredUsername) || string.IsNullOrEmpty(EnteredPassword))
             {
@@ -85,6 +93,33 @@
 
             DialogResult = DialogResult.OK;
             Close();
+        }
+
+        private void LoadLastUsername()
+        {
+            if (File.Exists(LastUserFile))
+            {
+                try
+                {
+                    string lastUser = File.ReadAllText(LastUserFile).Trim();
+                    if (!string.IsNullOrWhiteSpace(lastUser))
+                    { 
+                        txtUsername.Text = lastUser;
+                        ActiveControl = txtPassword;
+                    }
+                }
+                catch {}
+            }
+        }
+
+        private void SaveLastUsername(string username)
+        {
+            try
+            {
+                Directory.CreateDirectory(Path.GetDirectoryName(LastUserFile)!);
+                File.WriteAllText(LastUserFile, username);
+            }
+            catch {}
         }
 
     }
