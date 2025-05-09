@@ -1,8 +1,9 @@
-using System;
+﻿using System;
 using System.IO;
 using System.Windows.Forms;
 using Cryptig.Core;
 using static System.Windows.Forms.VisualStyles.VisualStyleElement.StartPanel;
+using Cryptig;
 
 namespace Cryptig
 {
@@ -24,6 +25,8 @@ namespace Cryptig
 
         private readonly string _username;
         private readonly string _password;
+
+        private Dictionary<int, string> _realPasswords = new Dictionary<int, string>();
 
         public Form1(MistigVault vault, string username, string password)
         {
@@ -49,6 +52,23 @@ namespace Cryptig
 
             lblPassword = new Label { Text = "Password", Top = txtUsername.Bottom + 10, Left = 20, Width = 100 };
             txtPassword = new TextBox { Top = lblPassword.Bottom + 2, Left = 20, Width = 200 };
+            txtPassword.UseSystemPasswordChar = true;
+
+            var btnTogglePassword = new Button
+            {
+                Text = "Show",
+                Top = txtPassword.Top,
+                Left = txtPassword.Right + 10,
+                Width = 60,
+                Height = txtPassword.Height
+            };
+            btnTogglePassword.Click += (s, e) =>
+            {
+                txtPassword.UseSystemPasswordChar = !txtPassword.UseSystemPasswordChar;
+                btnTogglePassword.Text = txtPassword.UseSystemPasswordChar ? "Show" : "Hide";
+            };
+
+            Controls.Add(btnTogglePassword);
 
             lblNotes = new Label { Text = "Notes", Top = txtPassword.Bottom + 10, Left = 20, Width = 100 };
             txtNotes = new TextBox { Top = lblNotes.Bottom + 2, Left = 20, Width = 200, Height = 60, Multiline = true };
@@ -68,6 +88,21 @@ namespace Cryptig
                 ReadOnly = true,
                 AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill
             };
+
+            dgvEntries.CellClick += DgvEntries_CellClick;
+            dgvEntries.SelectionMode = DataGridViewSelectionMode.FullRowSelect;
+            dgvEntries.MultiSelect = false;
+            dgvEntries.AllowUserToAddRows = false;
+
+            var btnReveal = new DataGridViewButtonColumn
+            {
+                Name = "RevealBtn",
+                HeaderText = "",
+                Text = "👁",
+                UseColumnTextForButtonValue = true,
+                Width = 30
+            };
+            dgvEntries.Columns.Add(btnReveal);
 
             Controls.AddRange(new Control[]
             {
@@ -92,6 +127,16 @@ namespace Cryptig
                 _vault = MistigVault.Load(path, _password);
 
                 dgvEntries.DataSource = _vault?.Data.Entries;
+
+                foreach (DataGridViewRow row in dgvEntries.Rows)
+                {
+                    if (row.Cells["Password"].Value is string pwd)
+                    {
+                        _realPasswords[row.Index] = pwd;
+                        int fakeLength = Math.Min(10, pwd.Length);
+                        row.Cells["Password"].Value = new string('•', fakeLength);
+                    }
+                }
             }
             catch
             {
@@ -103,6 +148,17 @@ namespace Cryptig
         private void BtnAddEntry_Click(object sender, EventArgs e)
         {
             if (_vault == null) return;
+
+            if (string.IsNullOrWhiteSpace(txtPassword.Text))
+            {
+                txtPassword.Text = PasswordGenerator.Generate(
+                    length: 32,
+                    includeUppercase: true,
+                    includeLowercase: true,
+                    includeDigits: true,
+                    includeSymbols: true
+                );
+            }
 
             var entry = new VaultEntry
             {
@@ -123,5 +179,40 @@ namespace Cryptig
             _vault?.Save();
             MessageBox.Show("Vault saved successfully.");
         }
+
+        private void DgvEntries_CellClick(object sender, DataGridViewCellEventArgs e)
+        {
+            if (e.RowIndex < 0 || e.ColumnIndex < 0)
+                return;
+
+            var col = dgvEntries.Columns[e.ColumnIndex];
+            var row = dgvEntries.Rows[e.RowIndex];
+
+            if (col.Name == "RevealBtn") // Bouton œil
+            {
+                if (_realPasswords.TryGetValue(e.RowIndex, out string realPwd))
+                {
+                    bool isMasked = row.Cells["Password"].Value?.ToString()?.StartsWith("•") ?? true;
+
+                    row.Cells["Password"].Value = isMasked ? realPwd : new string('•', Math.Min(10, realPwd.Length));
+                }
+            }
+            else if (col.Name == "Password") // Copier le mot de passe
+            {
+                if (_realPasswords.TryGetValue(e.RowIndex, out string realPwd))
+                {
+                    try
+                    {
+                        Clipboard.SetText(realPwd);
+                        MessageBox.Show("Mot de passe copié !");
+                    }
+                    catch (Exception ex)
+                    {
+                        MessageBox.Show("Erreur du presse-papiers : " + ex.Message);
+                    }
+                }
+            }
+        }
     }
+
 }
