@@ -223,6 +223,7 @@ namespace Cryptig
             };
 
             _vault.AddEntry(entry);
+            Logger.Info($"Entry added: Label='{entry.Label}' for user='{_username}'");
 
             dgvEntries.DataSource = null;
             dgvEntries.DataSource = _vault.Data.Entries;
@@ -231,6 +232,7 @@ namespace Cryptig
         private void BtnSaveVault_Click(object sender, EventArgs e)
         {
             _vault?.Save();
+            Logger.Info($"Vault saved for user='{_username}'");
             MessageBox.Show("Vault saved successfully.");
         }
 
@@ -277,6 +279,7 @@ namespace Cryptig
                     txtPassword.Text = _realPasswords[e.RowIndex];
                     txtNotes.Text = entry.Notes;
 
+                    Logger.Info($"Entry edited: Label='{entry.Label}' by user='{_username}'");
                     _vault.Data.Entries.RemoveAt(e.RowIndex);
                 }
 
@@ -290,6 +293,7 @@ namespace Cryptig
                     var confirm = MessageBox.Show("Are you sure you want to delete this entry?", "Confirm", MessageBoxButtons.YesNo);
                     if (confirm == DialogResult.Yes)
                     {
+                        Logger.Info($"Entry deleted: Label='{_vault.Data.Entries[e.RowIndex].Label}' by user='{_username}'");
                         _vault.Data.Entries.RemoveAt(e.RowIndex);
                         _realPasswords.Remove(e.RowIndex);
 

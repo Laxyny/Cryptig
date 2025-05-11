@@ -34,6 +34,7 @@ namespace Cryptig
                 }
                 catch (Exception ex)
                 {
+                    Logger.Error($"Login failed for user='{login.EnteredUsername}': {ex.Message}");
                     MessageBox.Show("Invalid username or password.\n\n" + ex.Message);
                 }
             }

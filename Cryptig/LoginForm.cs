@@ -1,4 +1,6 @@
-﻿namespace Cryptig
+﻿using Cryptig.Core;
+
+namespace Cryptig
 {
     public class LoginForm : Form
     {
@@ -56,6 +58,7 @@
                 return;
             }
 
+            Logger.Info($"Login attempted for user='{EnteredUsername}'");
             DialogResult = DialogResult.OK;
             Close();
         }
@@ -87,10 +90,12 @@
             }
             catch (Exception ex)
             {
+                Logger.Error($"Vault creation failed for user='{EnteredUsername}': {ex.Message}");
                 MessageBox.Show("Error: " + ex.Message);
                 return;
             }
 
+            Logger.Info($"New vault created for user='{EnteredUsername}'");
             DialogResult = DialogResult.OK;
             Close();
         }
