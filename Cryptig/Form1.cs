@@ -79,6 +79,14 @@ namespace Cryptig
             btnSaveVault = new Button { Text = "Save Vault", Top = txtNotes.Bottom + 10, Left = 140, Width = 100 };
             btnSaveVault.Click += BtnSaveVault_Click;
 
+            Label lblSearch = new Label { Text = "Search", Top = 20, Left = this.Width - 280, Width = 60 };
+            TextBox txtSearch = new TextBox { Top = lblSearch.Bottom + 2, Left = lblSearch.Left, Width = 200 };
+            txtSearch.TextChanged += (s, e) => ApplySearch(txtSearch.Text);
+            txtSearch.Anchor = AnchorStyles.Top | AnchorStyles.Right;
+            lblSearch.Anchor = AnchorStyles.Top | AnchorStyles.Right;
+            Controls.Add(lblSearch);
+            Controls.Add(txtSearch);
+
             dgvEntries = new DataGridView
             {
                 Top = btnAddEntry.Bottom + 20,
@@ -162,6 +170,32 @@ namespace Cryptig
             {
                 MessageBox.Show("Access denied: invalid username or password.");
                 Environment.Exit(1);
+            }
+        }
+
+        private void ApplySearch(string query)
+        {
+            if (_vault == null) return;
+
+            query = query.ToLowerInvariant();
+
+            var filtered = _vault.Data.Entries
+                .Where(entry =>
+                    entry.Label.ToLowerInvariant().Contains(query) ||
+                    entry.Username.ToLowerInvariant().Contains(query) ||
+                    entry.Notes.ToLowerInvariant().Contains(query))
+                .ToList();
+
+            dgvEntries.DataSource = null;
+            dgvEntries.DataSource = filtered;
+
+            for (int i = 0; i < filtered.Count; i++)
+            {
+                if (_realPasswords.TryGetValue(i, out string realPwd))
+                {
+                    int fakeLength = Math.Min(10, realPwd.Length);
+                    dgvEntries.Rows[i].Cells["Password"].Value = new string('•', fakeLength);
+                }
             }
         }
 
@@ -264,8 +298,6 @@ namespace Cryptig
                     }
                 }
             }
-
         }
     }
-
 }
