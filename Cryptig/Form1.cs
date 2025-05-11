@@ -104,6 +104,26 @@ namespace Cryptig
             };
             dgvEntries.Columns.Add(btnReveal);
 
+            var btnEdit = new DataGridViewButtonColumn
+            {
+                Name = "EditBtn",
+                HeaderText = "",
+                Text = "✏️",
+                UseColumnTextForButtonValue = true,
+                Width = 30
+            };
+            dgvEntries.Columns.Add(btnEdit);
+
+            var btnDelete = new DataGridViewButtonColumn
+            {
+                Name = "DeleteBtn",
+                HeaderText = "",
+                Text = "🗑",
+                UseColumnTextForButtonValue = true,
+                Width = 30
+            };
+            dgvEntries.Columns.Add(btnDelete);
+
             Controls.AddRange(new Control[]
             {
                 lblLabel, txtLabel,
@@ -188,7 +208,7 @@ namespace Cryptig
             var col = dgvEntries.Columns[e.ColumnIndex];
             var row = dgvEntries.Rows[e.RowIndex];
 
-            if (col.Name == "RevealBtn") // Bouton œil
+            if (col.Name == "RevealBtn")
             {
                 if (_realPasswords.TryGetValue(e.RowIndex, out string realPwd))
                 {
@@ -197,21 +217,54 @@ namespace Cryptig
                     row.Cells["Password"].Value = isMasked ? realPwd : new string('•', Math.Min(10, realPwd.Length));
                 }
             }
-            else if (col.Name == "Password") // Copier le mot de passe
+            else if (col.Name == "Password")
             {
                 if (_realPasswords.TryGetValue(e.RowIndex, out string realPwd))
                 {
                     try
                     {
                         Clipboard.SetText(realPwd);
-                        MessageBox.Show("Mot de passe copié !");
+                        MessageBox.Show("Password copied!");
                     }
                     catch (Exception ex)
                     {
-                        MessageBox.Show("Erreur du presse-papiers : " + ex.Message);
+                        MessageBox.Show("Clipboard error: " + ex.Message);
                     }
                 }
             }
+            else if (col.Name == "EditBtn")
+            {
+                if (_vault != null && e.RowIndex >= 0 && e.RowIndex < _vault.Data.Entries.Count)
+                {
+                    var entry = _vault.Data.Entries[e.RowIndex];
+
+                    txtLabel.Text = entry.Label;
+                    txtUsername.Text = entry.Username;
+                    txtPassword.Text = _realPasswords[e.RowIndex];
+                    txtNotes.Text = entry.Notes;
+
+                    _vault.Data.Entries.RemoveAt(e.RowIndex);
+                }
+
+                dgvEntries.DataSource = null;
+                dgvEntries.DataSource = _vault.Data.Entries;
+            }
+            else if (col.Name == "DeleteBtn")
+            {
+                if (_vault != null && e.RowIndex >= 0 && e.RowIndex < _vault.Data.Entries.Count)
+                {
+                    var confirm = MessageBox.Show("Are you sure you want to delete this entry?", "Confirm", MessageBoxButtons.YesNo);
+                    if (confirm == DialogResult.Yes)
+                    {
+                        _vault.Data.Entries.RemoveAt(e.RowIndex);
+                        _realPasswords.Remove(e.RowIndex);
+
+                        dgvEntries.DataSource = null;
+                        dgvEntries.DataSource = _vault.Data.Entries;
+                    }
+                }
+            }
+
         }
     }
 
