@@ -231,6 +231,9 @@ namespace Cryptig
 
         private void BtnSaveVault_Click(object sender, EventArgs e)
         {
+            string path = $"vault_{_username}.mistig";
+            BackupHelper.CreateDailyBackup(path, _username);
+
             _vault?.Save();
             Logger.Info($"Vault saved for user='{_username}'");
             MessageBox.Show("Vault saved successfully.");
