@@ -59,7 +59,15 @@ namespace Cryptig.Core
             byte[] plaintext = CryptoEngine.Decrypt(ciphertext, key, iv, tag);
 
             string json = Encoding.UTF8.GetString(plaintext);
-            VaultData data = JsonSerializer.Deserialize<VaultData>(json) ?? new VaultData();
+            VaultData data = JsonSerializer.Deserialize<VaultData>(
+                json,
+                new JsonSerializerOptions
+                {
+                    PropertyNameCaseInsensitive = true,
+                    ReadCommentHandling = JsonCommentHandling.Skip,
+                    AllowTrailingCommas = true
+                }) ?? new VaultData();
+
 
             return new MistigVault
             {

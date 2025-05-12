@@ -9,6 +9,8 @@ namespace Cryptig
 {
     public partial class Form1 : Form
     {
+        private readonly UserPreferences _userPrefs;
+
         private MistigVault? _vault;
 
         private Label lblLabel;
@@ -27,9 +29,12 @@ namespace Cryptig
         private readonly string _password;
 
         private Dictionary<int, string> _realPasswords = new Dictionary<int, string>();
+        private HashSet<int> _revealedRows = new HashSet<int>();
 
         public Form1(MistigVault vault, string username, string password)
         {
+            _userPrefs = UserPreferences.Load();
+
             _vault = vault ?? throw new ArgumentNullException(nameof(vault));
             _username = username;
             _password = password;
@@ -48,8 +53,8 @@ namespace Cryptig
             MenuStrip menuStrip = new MenuStrip();
 
             ToolStripMenuItem fileMenu = new ToolStripMenuItem("File");
-            ToolStripMenuItem importItem = new ToolStripMenuItem("Import Vault...");
-            ToolStripMenuItem exportItem = new ToolStripMenuItem("Export Vault...");
+            ToolStripMenuItem importItem = new ToolStripMenuItem("Import Vault");
+            ToolStripMenuItem exportItem = new ToolStripMenuItem("Export Vault");
             importItem.Click += ImportVault_Click;
             exportItem.Click += ExportVault_Click;
 
@@ -116,9 +121,20 @@ namespace Cryptig
             };
 
             dgvEntries.CellClick += DgvEntries_CellClick;
+            dgvEntries.CellFormatting += DgvEntries_CellFormatting;
             dgvEntries.SelectionMode = DataGridViewSelectionMode.FullRowSelect;
             dgvEntries.MultiSelect = false;
             dgvEntries.AllowUserToAddRows = false;
+
+            ContextMenuStrip contextMenu = new ContextMenuStrip();
+            ToolStripMenuItem copyPwdItem = new ToolStripMenuItem("Copy Password");
+            ToolStripMenuItem deleteItem = new ToolStripMenuItem("Delete Entry");
+
+            copyPwdItem.Click += (s, e) => CopySelectedPassword();
+            deleteItem.Click += (s, e) => DeleteSelectedEntry();
+
+            contextMenu.Items.AddRange(new ToolStripItem[] { copyPwdItem, deleteItem });
+            dgvEntries.ContextMenuStrip = contextMenu;
 
             var btnReveal = new DataGridViewButtonColumn
             {
@@ -159,6 +175,14 @@ namespace Cryptig
                 btnAddEntry, btnSaveVault,
                 dgvEntries
             });
+        }
+
+        private void BuildPasswordsDictionary(IEnumerable<VaultEntry> entries)
+        {
+            _realPasswords.Clear();
+            int i = 0;
+            foreach (var entry in entries)
+                _realPasswords[i++] = entry.Password;
         }
 
         private void ImportVault_Click(object sender, EventArgs e)
@@ -207,6 +231,7 @@ namespace Cryptig
 
                 dgvEntries.DataSource = null;
                 dgvEntries.DataSource = _vault?.Data.Entries;
+                BuildPasswordsDictionary((IEnumerable<VaultEntry>)dgvEntries.DataSource);
 
                 MessageBox.Show(
                     $"Imported and merged {importedVault.Data.Entries.Count} entries into your current vault.\n" +
@@ -264,18 +289,8 @@ namespace Cryptig
                     throw new Exception("This user does not exist.");
 
                 _vault = MistigVault.Load(path, _password);
-
                 dgvEntries.DataSource = _vault?.Data.Entries;
-
-                foreach (DataGridViewRow row in dgvEntries.Rows)
-                {
-                    if (row.Cells["Password"].Value is string pwd)
-                    {
-                        _realPasswords[row.Index] = pwd;
-                        int fakeLength = Math.Min(10, pwd.Length);
-                        row.Cells["Password"].Value = new string('•', fakeLength);
-                    }
-                }
+                BuildPasswordsDictionary((IEnumerable<VaultEntry>)dgvEntries.DataSource);
             }
             catch
             {
@@ -299,6 +314,7 @@ namespace Cryptig
 
             dgvEntries.DataSource = null;
             dgvEntries.DataSource = filtered;
+            BuildPasswordsDictionary((IEnumerable<VaultEntry>)dgvEntries.DataSource);
 
             for (int i = 0; i < filtered.Count; i++)
             {
@@ -325,11 +341,19 @@ namespace Cryptig
                 );
             }
 
+            string rawPwd = txtPassword.Text;
+            bool isMasked = rawPwd.All(c => c == '•');
+
+            if (isMasked && _vault.Data.Entries.Count >= 0 && _realPasswords.TryGetValue(_vault.Data.Entries.Count, out var recovered))
+            {
+                rawPwd = recovered;
+            }
+
             var entry = new VaultEntry
             {
                 Label = txtLabel.Text,
                 Username = txtUsername.Text,
-                Password = txtPassword.Text,
+                Password = rawPwd,
                 Notes = txtNotes.Text
             };
 
@@ -338,6 +362,7 @@ namespace Cryptig
 
             dgvEntries.DataSource = null;
             dgvEntries.DataSource = _vault.Data.Entries;
+            BuildPasswordsDictionary((IEnumerable<VaultEntry>)dgvEntries.DataSource);
         }
 
         private void BtnSaveVault_Click(object sender, EventArgs e)
@@ -360,13 +385,14 @@ namespace Cryptig
 
             if (col.Name == "RevealBtn")
             {
-                if (_realPasswords.TryGetValue(e.RowIndex, out string realPwd))
-                {
-                    bool isMasked = row.Cells["Password"].Value?.ToString()?.StartsWith("•") ?? true;
+                if (_revealedRows.Contains(e.RowIndex))
+                    _revealedRows.Remove(e.RowIndex);
+                else
+                    _revealedRows.Add(e.RowIndex);
 
-                    row.Cells["Password"].Value = isMasked ? realPwd : new string('•', Math.Min(10, realPwd.Length));
-                }
+                dgvEntries.InvalidateRow(e.RowIndex);
             }
+
             else if (col.Name == "Password")
             {
                 if (_realPasswords.TryGetValue(e.RowIndex, out string realPwd))
@@ -399,6 +425,7 @@ namespace Cryptig
 
                 dgvEntries.DataSource = null;
                 dgvEntries.DataSource = _vault.Data.Entries;
+                BuildPasswordsDictionary((IEnumerable<VaultEntry>)dgvEntries.DataSource);
             }
             else if (col.Name == "DeleteBtn")
             {
@@ -413,8 +440,57 @@ namespace Cryptig
 
                         dgvEntries.DataSource = null;
                         dgvEntries.DataSource = _vault.Data.Entries;
+                        BuildPasswordsDictionary((IEnumerable<VaultEntry>)dgvEntries.DataSource);
                     }
                 }
+            }
+        }
+
+        private void CopySelectedPassword()
+        {
+            if (dgvEntries.SelectedRows.Count > 0)
+            {
+                int index = dgvEntries.SelectedRows[0].Index;
+                if (_realPasswords.TryGetValue(index, out string realPwd))
+                {
+                    Clipboard.SetText(realPwd);
+                    Logger.Info($"Password copied from entry index {index}.");
+                }
+            }
+        }
+
+        private void DeleteSelectedEntry()
+        {
+            if (_vault == null || dgvEntries.SelectedRows.Count == 0)
+                return;
+
+            int index = dgvEntries.SelectedRows[0].Index;
+            if (index >= 0 && index < _vault.Data.Entries.Count)
+            {
+                var confirm = MessageBox.Show("Delete this entry?", "Confirm", MessageBoxButtons.YesNo);
+                if (confirm == DialogResult.Yes)
+                {
+                    Logger.Info($"Entry deleted (context menu): Label='{_vault.Data.Entries[index].Label}'");
+                    _vault.Data.Entries.RemoveAt(index);
+                    _realPasswords.Remove(index);
+
+                    dgvEntries.DataSource = null;
+                    dgvEntries.DataSource = _vault.Data.Entries;
+                    BuildPasswordsDictionary((IEnumerable<VaultEntry>)dgvEntries.DataSource);
+                }
+            }
+        }
+
+        private void DgvEntries_CellFormatting(object sender, DataGridViewCellFormattingEventArgs e)
+        {
+            if (e.RowIndex < 0 || e.ColumnIndex < 0) return;
+            if (dgvEntries.Columns[e.ColumnIndex].Name != "Password") return;
+            if (!_realPasswords.TryGetValue(e.RowIndex, out var realPwd)) return;
+
+            if (!_revealedRows.Contains(e.RowIndex))
+            {
+                e.Value = new string('•', Math.Min(10, realPwd.Length));
+                e.FormattingApplied = true;
             }
         }
     }
