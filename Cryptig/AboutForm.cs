@@ -19,7 +19,7 @@ namespace Cryptig
                 Text =
                     $"{AboutService.AppName} — Version {AboutService.Version}\n\n" +
                     $"Author: {AboutService.Author}\n" +
-                    $"License: {AboutService.License}\n\n" +
+                    $"License: {AboutService.License}\n\n" + 
                     $"{AboutService.Description}\n\n",
                 AutoSize = false,
                 Width = this.ClientSize.Width - 40,

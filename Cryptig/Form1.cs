@@ -210,6 +210,12 @@ namespace Cryptig
             {
                 _inactivityTimer.Stop();
                 Logger.Info($"Vault locked due to inactivity by user='{_username}'");
+
+                foreach (Form openForm in Application.OpenForms)
+                {
+                    if (openForm != this)
+                        openForm.Invoke((MethodInvoker)(() => openForm.Close()));
+                }
                 LockVault();
             }
         }
