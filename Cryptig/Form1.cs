@@ -127,11 +127,13 @@ namespace Cryptig
             {
                 Top = btnAddEntry.Bottom + 20,
                 Left = 20,
-                Width = 740,
-                Height = 300,
+                Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right,
                 ReadOnly = true,
                 AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill
             };
+            dgvEntries.Width = this.ClientSize.Width - 40;
+            dgvEntries.Height = this.ClientSize.Height - dgvEntries.Top - 40;
+
 
             dgvEntries.CellClick += DgvEntries_CellClick;
             dgvEntries.CellFormatting += DgvEntries_CellFormatting;
