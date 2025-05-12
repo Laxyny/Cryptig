@@ -44,7 +44,25 @@ namespace Cryptig
             this.Width = 800;
             this.Height = 600;
 
-            lblLabel = new Label { Text = "Label", Top = 20, Left = 20, Width = 100 };
+            // Menu with file, edition...
+            MenuStrip menuStrip = new MenuStrip();
+
+            ToolStripMenuItem fileMenu = new ToolStripMenuItem("File");
+            ToolStripMenuItem importItem = new ToolStripMenuItem("Import Vault...");
+            ToolStripMenuItem exportItem = new ToolStripMenuItem("Export Vault...");
+            importItem.Click += ImportVault_Click;
+            exportItem.Click += ExportVault_Click;
+
+            menuStrip.Dock = DockStyle.Top;
+            fileMenu.DropDownItems.Add(importItem);
+            fileMenu.DropDownItems.Add(exportItem);
+            menuStrip.Items.Add(fileMenu);
+
+            Controls.Add(menuStrip);
+            MainMenuStrip = menuStrip;
+
+            int y = menuStrip.Height + 10;
+            lblLabel = new Label { Text = "Label", Top = y, Left = 20, Width = 100 };
             txtLabel = new TextBox { Top = lblLabel.Bottom + 2, Left = 20, Width = 200 };
 
             lblUsername = new Label { Text = "Username", Top = txtLabel.Bottom + 10, Left = 20, Width = 100 };
@@ -79,7 +97,7 @@ namespace Cryptig
             btnSaveVault = new Button { Text = "Save Vault", Top = txtNotes.Bottom + 10, Left = 140, Width = 100 };
             btnSaveVault.Click += BtnSaveVault_Click;
 
-            Label lblSearch = new Label { Text = "Search", Top = 20, Left = this.Width - 280, Width = 60 };
+            Label lblSearch = new Label { Text = "Search", Top = y, Left = this.Width - 280, Width = 60 };
             TextBox txtSearch = new TextBox { Top = lblSearch.Bottom + 2, Left = lblSearch.Left, Width = 200 };
             txtSearch.TextChanged += (s, e) => ApplySearch(txtSearch.Text);
             txtSearch.Anchor = AnchorStyles.Top | AnchorStyles.Right;
@@ -141,6 +159,99 @@ namespace Cryptig
                 btnAddEntry, btnSaveVault,
                 dgvEntries
             });
+        }
+
+        private void ImportVault_Click(object sender, EventArgs e)
+        {
+            using OpenFileDialog openDialog = new OpenFileDialog
+            {
+                Filter = "Cryptig Vault (*.mistig)|*.mistig",
+                Title = "Select a Vault to Import"
+            };
+
+            if (openDialog.ShowDialog() != DialogResult.OK)
+                return;
+
+            string importPath = openDialog.FileName;
+
+            using Form passwordPrompt = new Form
+            {
+                Width = 300,
+                Height = 150,
+                Text = "Enter Vault Password",
+                FormBorderStyle = FormBorderStyle.FixedDialog,
+                StartPosition = FormStartPosition.CenterParent
+            };
+
+            TextBox txtPwd = new TextBox { Left = 20, Top = 20, Width = 240, UseSystemPasswordChar = true };
+            Button btnOk = new Button { Text = "OK", Left = 20, Top = txtPwd.Bottom + 10, Width = 240 };
+            btnOk.Click += (s, ev) => passwordPrompt.DialogResult = DialogResult.OK;
+
+            passwordPrompt.Controls.AddRange(new Control[] { txtPwd, btnOk });
+            passwordPrompt.AcceptButton = btnOk;
+
+            if (passwordPrompt.ShowDialog() != DialogResult.OK)
+                return;
+
+            string enteredPwd = txtPwd.Text;
+
+            try
+            {
+                var importedVault = MistigVault.Load(importPath, enteredPwd);
+
+                foreach (var entry in importedVault.Data.Entries)
+                {
+                    _vault?.AddEntry(entry);
+                    Logger.Info($"Imported entry: Label='{entry.Label}' into current session.");
+                }
+
+                dgvEntries.DataSource = null;
+                dgvEntries.DataSource = _vault?.Data.Entries;
+
+                MessageBox.Show(
+                    $"Imported and merged {importedVault.Data.Entries.Count} entries into your current vault.\n" +
+                    "Remember to click 'Save Vault' if you want to keep them.",
+                    "Import Successful"
+                );
+
+                Logger.Info($"Vault imported and merged from '{importPath}' into current session.");
+            }
+            catch (Exception ex)
+            {
+                Logger.Warn($"Failed import from '{importPath}': {ex.Message}");
+                MessageBox.Show("Invalid password or corrupted vault.", "Import Failed");
+            }
+        }
+
+        private void ExportVault_Click(object sender, EventArgs e)
+        {
+            if (_vault == null)
+            {
+                MessageBox.Show("No vault loaded.");
+                return;
+            }
+
+            using SaveFileDialog saveDialog = new SaveFileDialog
+            {
+                Filter = "Cryptig Vault (*.mistig)|*.mistig",
+                FileName = $"vault_{_username}_export.mistig"
+            };
+
+            if (saveDialog.ShowDialog() == DialogResult.OK)
+            {
+                try
+                {
+                    string currentVaultPath = $"vault_{_username}.mistig";
+                    File.Copy(currentVaultPath, saveDialog.FileName, true);
+                    Logger.Info($"Vault manually exported by user='{_username}' to '{saveDialog.FileName}'");
+                    MessageBox.Show("Vault exported successfully.");
+                }
+                catch (Exception ex)
+                {
+                    Logger.Error($"Export failed for user='{_username}': {ex.Message}");
+                    MessageBox.Show("Export failed: " + ex.Message);
+                }
+            }
         }
 
         private void LoadVault()
