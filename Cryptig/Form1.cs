@@ -49,6 +49,9 @@ namespace Cryptig
             _inactivityTimer.Tick += InactivityTimer_Tick;
             _inactivityTimer.Start();
 
+            this.KeyPreview = true;
+            this.KeyDown += Form1_KeyDown;
+
             CreateUI();
             LoadVault();
         }
@@ -75,6 +78,12 @@ namespace Cryptig
             fileMenu.DropDownItems.Add(exportItem);
             fileMenu.DropDownItems.Add(lockItem);
             menuStrip.Items.Add(fileMenu);
+
+            ToolStripMenuItem helpMenu = new ToolStripMenuItem("Help");
+            ToolStripMenuItem aboutItem = new ToolStripMenuItem("About Cryptig");
+            aboutItem.Click += (s, e) => new AboutForm().ShowDialog();
+            helpMenu.DropDownItems.Add(aboutItem);
+            menuStrip.Items.Add(helpMenu);
 
             Controls.Add(menuStrip);
             MainMenuStrip = menuStrip;
@@ -570,6 +579,16 @@ namespace Cryptig
                 }
             }
             Show();
+        }
+
+        private void Form1_KeyDown(object sender, KeyEventArgs e)
+        {
+            if (e.Control && e.KeyCode == Keys.L)
+            {
+                Logger.Info("Vault manually locked via Ctrl+L shortcut.");
+                LockVault();
+                e.Handled = true;
+            }
         }
     }
 }
