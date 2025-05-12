@@ -74,7 +74,15 @@ namespace Cryptig
                 return;
             }
 
-            string path = $"vault_{EnteredUsername}.mistig";
+            string path = Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+                "Cryptig", "vaults", $"vault_{EnteredUsername}.mistig"
+            );
+
+            // Create the directory if it doesn't exist
+            if (!Directory.Exists(Path.GetDirectoryName(path)!))
+                Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+
             if (File.Exists(path))
             {
                 MessageBox.Show("This user already exists.");

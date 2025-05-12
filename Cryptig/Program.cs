@@ -18,7 +18,10 @@ namespace Cryptig
                 if (login.ShowDialog() != DialogResult.OK)
                     break;
 
-                string path = $"vault_{login.EnteredUsername}.mistig";
+                string path = Path.Combine(
+                    Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+                    "Cryptig", "vaults", $"vault_{login.EnteredUsername}.mistig"
+                );
 
                 try
                 {

@@ -4,6 +4,7 @@ using System.Windows.Forms;
 using Cryptig.Core;
 using static System.Windows.Forms.VisualStyles.VisualStyleElement.StartPanel;
 using Cryptig;
+using Timer = System.Windows.Forms.Timer;
 
 namespace Cryptig
 {
@@ -31,6 +32,9 @@ namespace Cryptig
         private Dictionary<int, string> _realPasswords = new Dictionary<int, string>();
         private HashSet<int> _revealedRows = new HashSet<int>();
 
+        private readonly InactivityService _idleService;
+        private readonly Timer _inactivityTimer;
+
         public Form1(MistigVault vault, string username, string password)
         {
             _userPrefs = UserPreferences.Load();
@@ -38,6 +42,12 @@ namespace Cryptig
             _vault = vault ?? throw new ArgumentNullException(nameof(vault));
             _username = username;
             _password = password;
+
+            _idleService = new InactivityService(TimeSpan.FromMinutes(5));
+
+            _inactivityTimer = new Timer { Interval = 10_000 };
+            _inactivityTimer.Tick += InactivityTimer_Tick;
+            _inactivityTimer.Start();
 
             CreateUI();
             LoadVault();
@@ -55,12 +65,15 @@ namespace Cryptig
             ToolStripMenuItem fileMenu = new ToolStripMenuItem("File");
             ToolStripMenuItem importItem = new ToolStripMenuItem("Import Vault");
             ToolStripMenuItem exportItem = new ToolStripMenuItem("Export Vault");
+            ToolStripMenuItem lockItem = new ToolStripMenuItem("Lock Vault");
             importItem.Click += ImportVault_Click;
             exportItem.Click += ExportVault_Click;
+            lockItem.Click += (s, e) => LockVault();
 
             menuStrip.Dock = DockStyle.Top;
             fileMenu.DropDownItems.Add(importItem);
             fileMenu.DropDownItems.Add(exportItem);
+            fileMenu.DropDownItems.Add(lockItem);
             menuStrip.Items.Add(fileMenu);
 
             Controls.Add(menuStrip);
@@ -177,6 +190,16 @@ namespace Cryptig
             });
         }
 
+        private void InactivityTimer_Tick(object sender, EventArgs e)
+        {
+            if (_idleService.IsExpired())
+            {
+                _inactivityTimer.Stop();
+                Logger.Info($"Vault locked due to inactivity by user='{_username}'");
+                LockVault();
+            }
+        }
+
         private void BuildPasswordsDictionary(IEnumerable<VaultEntry> entries)
         {
             _realPasswords.Clear();
@@ -266,7 +289,11 @@ namespace Cryptig
             {
                 try
                 {
-                    string currentVaultPath = $"vault_{_username}.mistig";
+                    string currentVaultPath = Path.Combine(
+                        Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+                        "Cryptig", "vaults", $"vault_{_username}.mistig"
+                    );
+
                     File.Copy(currentVaultPath, saveDialog.FileName, true);
                     Logger.Info($"Vault manually exported by user='{_username}' to '{saveDialog.FileName}'");
                     MessageBox.Show("Vault exported successfully.");
@@ -281,7 +308,10 @@ namespace Cryptig
 
         private void LoadVault()
         {
-            string path = $"vault_{_username}.mistig";
+            string path = Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+                "Cryptig", "vaults", $"vault_{_username}.mistig"
+            );
 
             try
             {
@@ -367,7 +397,11 @@ namespace Cryptig
 
         private void BtnSaveVault_Click(object sender, EventArgs e)
         {
-            string path = $"vault_{_username}.mistig";
+            string path = Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+                "Cryptig", "vaults", $"vault_{_username}.mistig"
+            );
+
             BackupHelper.CreateDailyBackup(path, _username);
 
             _vault?.Save();
@@ -492,6 +526,45 @@ namespace Cryptig
                 e.Value = new string('•', Math.Min(10, realPwd.Length));
                 e.FormattingApplied = true;
             }
+        }
+
+        private void LockVault()
+        {
+            Logger.Info($"Vault locked manually by user='{_username}'");
+
+            Hide();
+            using (var login = new LoginForm())
+            {
+                if (login.ShowDialog() == DialogResult.OK)
+                {
+                    string path = Path.Combine(
+                        Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+                        "Cryptig", "vaults", $"vault_{login.EnteredUsername}.mistig"
+                    );
+
+                    try
+                    {
+                        var vault = MistigVault.Load(path, login.EnteredPassword);
+                        _vault = vault;
+                        dgvEntries.DataSource = _vault?.Data.Entries;
+                        BuildPasswordsDictionary((IEnumerable<VaultEntry>)dgvEntries.DataSource);
+
+                        Logger.Info($"Vault re-unlocked by user='{login.EnteredUsername}'");
+                        _revealedRows.Clear();
+                    }
+                    catch (Exception ex)
+                    {
+                        Logger.Error($"Re-login failed: {ex.Message}");
+                        MessageBox.Show("Failed to unlock vault: " + ex.Message);
+                        Application.Exit();
+                    }
+                }
+                else
+                {
+                    Application.Exit();
+                }
+            }
+            Show();
         }
     }
 }
