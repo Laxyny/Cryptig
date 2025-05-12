@@ -155,8 +155,9 @@ namespace Cryptig
                 HeaderText = "",
                 Text = "👁",
                 UseColumnTextForButtonValue = true,
-                Width = 30
+                Width = 50
             };
+            btnReveal.AutoSizeMode = DataGridViewAutoSizeColumnMode.None;
             dgvEntries.Columns.Add(btnReveal);
 
             var btnEdit = new DataGridViewButtonColumn
@@ -165,8 +166,9 @@ namespace Cryptig
                 HeaderText = "",
                 Text = "✏️",
                 UseColumnTextForButtonValue = true,
-                Width = 30
+                Width = 50
             };
+            btnEdit.AutoSizeMode = DataGridViewAutoSizeColumnMode.None;
             dgvEntries.Columns.Add(btnEdit);
 
             var btnDelete = new DataGridViewButtonColumn
@@ -175,8 +177,9 @@ namespace Cryptig
                 HeaderText = "",
                 Text = "🗑",
                 UseColumnTextForButtonValue = true,
-                Width = 30
+                Width = 50
             };
+            btnDelete.AutoSizeMode = DataGridViewAutoSizeColumnMode.None;
             dgvEntries.Columns.Add(btnDelete);
 
             Controls.AddRange(new Control[]
