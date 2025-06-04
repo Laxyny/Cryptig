@@ -49,6 +49,21 @@ bound to the account that created them.
 
 ---
 
+## Outils pour Développeurs
+
+- **API Locale** : Une API locale permettant à d'autres applications de communiquer avec Cryptig pour récupérer ou ajouter des identifiants de manière sécurisée.
+- **Mode Ligne de Commande** : Une interface en ligne de commande pour les utilisateurs avancés souhaitant gérer leurs mots de passe sans interface graphique.
+
+Pour démarrer l'API locale, ouvrez *Developer Tools > Start Local API* depuis l'application. Une clé d'accès unique vous sera affichée et devra être envoyée dans l'en-tête `Authorization` de chaque requête.
+
+L'outil en ligne de commande `cryptig-cli` permet de lister, ajouter ou supprimer des entrées.
+
+```bash
+dotnet run --project Cryptig.CLI <username> <password> list
+```
+
+---
+
 ## Installation
 
 Installation packages (MSI/EXE) will be available soon.
