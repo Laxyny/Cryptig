@@ -32,6 +32,17 @@ namespace Cryptig
                     if (vault == null)
                         throw new Exception("Vault is null.");
 
+                    if (!string.IsNullOrEmpty(vault.Data.TwoFactorSecret))
+                    {
+                        using var tf = new TwoFactorForm();
+                        if (tf.ShowDialog() != DialogResult.OK ||
+                            !TwoFactorAuth.VerifyCode(vault.Data.TwoFactorSecret, tf.EnteredCode))
+                        {
+                            MessageBox.Show("Invalid authentication code.");
+                            continue;
+                        }
+                    }
+
                     Application.Run(new Form1(vault, login.EnteredUsername, login.EnteredPassword));
                     break;
                 }
