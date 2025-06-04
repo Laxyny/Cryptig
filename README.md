@@ -39,6 +39,8 @@ images private alongside your passwords.
 
 From the main window, use **File > Create File Vault** or **File > Open File Vault**
 to manage encrypted containers for your personal files.
+The vault window now supports drag & drop of files, double-click to preview
+items and daily backups just like the main password vault.
 
 ---
 
