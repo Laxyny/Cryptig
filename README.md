@@ -26,6 +26,7 @@ All data is locally stored, using robust cryptography (AES-256-GCM + Argon2id), 
 - Future cloud sync/export with encryption in mind
 - Built-in password generator & password strength checker
 - Encrypted `FileVault` for securing any type of file
+- Explorer-style file vault interface with previews and rename options
 
 ### FileVault Overview
 
@@ -40,7 +41,11 @@ images private alongside your passwords.
 From the main window, use **File > Create File Vault** or **File > Open File Vault**
 to manage encrypted containers for your personal files.
 The vault window now supports drag & drop of files, double-click to preview
-items and daily backups just like the main password vault.
+items and daily backups just like the main password vault. Version 2 adds a
+modern explorer-like interface with file previews, rename support and context
+menus.
+File vaults are stored per-user in `%AppData%\Cryptig\filevaults` and are
+bound to the account that created them.
 
 ---
 
