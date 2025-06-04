@@ -16,7 +16,7 @@ namespace Cryptig.Core
         private const string MagicHeader = "MISF";
         private const byte Version = 1;
 
-        private Dictionary<string, byte[]> _files = new();
+        private readonly Dictionary<string, byte[]> _files = new();
         private byte[]? _key;
         private byte[]? _salt;
         private byte[]? _iv;
