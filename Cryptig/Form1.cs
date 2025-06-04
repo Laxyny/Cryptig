@@ -356,7 +356,7 @@ namespace Cryptig
             try
             {
                 var vault = FileVault.CreateNew(path, password);
-                using var fvForm = new FileVaultForm(vault);
+                using var fvForm = new FileVaultForm(vault, _username);
                 fvForm.ShowDialog(this);
             }
             catch (Exception ex)
@@ -383,7 +383,7 @@ namespace Cryptig
             try
             {
                 var vault = FileVault.Load(dlg.FileName, password);
-                using var fvForm = new FileVaultForm(vault);
+                using var fvForm = new FileVaultForm(vault, _username);
                 fvForm.ShowDialog(this);
             }
             catch (Exception ex)

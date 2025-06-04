@@ -4,6 +4,7 @@ using System.IO;
 using System.IO.Compression;
 using System.Text;
 
+
 namespace Cryptig.Core
 {
     /// <summary>
@@ -21,6 +22,11 @@ namespace Cryptig.Core
         private byte[]? _salt;
         private byte[]? _iv;
         private string? _path;
+
+        /// <summary>
+        /// Path on disk of the underlying .misf file.
+        /// </summary>
+        public string? Path => _path;
 
         private FileVault() { }
 
@@ -88,14 +94,24 @@ namespace Cryptig.Core
             string name = Path.GetFileName(filePath);
             byte[] data = File.ReadAllBytes(filePath);
             _files[name] = data;
+            Logger.Info($"File added to vault '{_path}': {name}");
         }
 
         public void RemoveFile(string fileName)
         {
             _files.Remove(fileName);
+            Logger.Info($"File removed from vault '{_path}': {fileName}");
         }
 
         public IEnumerable<string> GetFileNames() => _files.Keys;
+
+        /// <summary>
+        /// Retrieves raw bytes of a stored file.
+        /// </summary>
+        public byte[] GetFileData(string fileName)
+        {
+            return _files[fileName];
+        }
 
         public void ExtractAll(string directory)
         {
@@ -104,6 +120,7 @@ namespace Cryptig.Core
             {
                 File.WriteAllBytes(Path.Combine(directory, name), data);
             }
+            Logger.Info($"Vault '{_path}' extracted to '{directory}'");
         }
 
         public void Save()
@@ -133,6 +150,8 @@ namespace Cryptig.Core
             writer.Write(tag);
             writer.Write(ciphertext.Length);
             writer.Write(ciphertext);
+
+            Logger.Info($"Vault saved to '{_path}'");
         }
     }
 }
