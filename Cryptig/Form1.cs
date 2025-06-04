@@ -34,6 +34,7 @@ namespace Cryptig
 
         private readonly InactivityService _idleService;
         private readonly Timer _inactivityTimer;
+        private LocalApiServer? _apiServer;
 
         public Form1(MistigVault vault, string username, string password)
         {
@@ -71,7 +72,18 @@ namespace Cryptig
             ToolStripMenuItem lockItem = new ToolStripMenuItem("Lock Vault");
             ToolStripMenuItem createFVItem = new ToolStripMenuItem("Create File Vault");
             ToolStripMenuItem openFVItem = new ToolStripMenuItem("Open File Vault");
+
             ToolStripMenuItem twoFactorItem = new ToolStripMenuItem("Two-Factor Setup");
+            ToolStripMenuItem settingsMenu = new ToolStripMenuItem("Settings");
+            settingsMenu.DropDownItems.Add(twoFactorItem);
+
+            ToolStripMenuItem devMenu = new ToolStripMenuItem("Developer Tools");
+            ToolStripMenuItem apiItem = new ToolStripMenuItem("Start Local API");
+            ToolStripMenuItem cliItem = new ToolStripMenuItem("Command Line Mode");
+            apiItem.Click += ApiItem_Click;
+            cliItem.Click += (s, e) => MessageBox.Show("Use the 'cryptig-cli' tool for command line access.");
+            devMenu.DropDownItems.Add(apiItem);
+            devMenu.DropDownItems.Add(cliItem);
             importItem.Click += ImportVault_Click;
             exportItem.Click += ExportVault_Click;
             lockItem.Click += (s, e) => LockVault();
@@ -86,8 +98,9 @@ namespace Cryptig
             fileMenu.DropDownItems.Add(new ToolStripSeparator());
             fileMenu.DropDownItems.Add(createFVItem);
             fileMenu.DropDownItems.Add(openFVItem);
-            fileMenu.DropDownItems.Add(twoFactorItem);
             menuStrip.Items.Add(fileMenu);
+            menuStrip.Items.Add(settingsMenu);
+            menuStrip.Items.Add(devMenu);
 
             ToolStripMenuItem helpMenu = new ToolStripMenuItem("Help");
             ToolStripMenuItem aboutItem = new ToolStripMenuItem("About Cryptig");
@@ -701,6 +714,24 @@ namespace Cryptig
                     _vault.Save();
                     MessageBox.Show("Two-factor authentication disabled.");
                 }
+            }
+        }
+
+        private void ApiItem_Click(object? sender, EventArgs e)
+        {
+            if (_vault == null) return;
+
+            if (_apiServer == null)
+            {
+                _apiServer = new LocalApiServer(_vault);
+                _apiServer.Start();
+                MessageBox.Show($"API started on http://localhost:{_apiServer.Port}\nToken: {_apiServer.Token}", "Local API");
+            }
+            else
+            {
+                _apiServer.Stop();
+                _apiServer = null;
+                MessageBox.Show("API stopped.", "Local API");
             }
         }
 
