@@ -17,18 +17,18 @@ namespace Cryptig.Core
         private const string MagicHeader = "MISF";
         private const byte Version = 1;
 
-        private readonly Dictionary<string, byte[]> _files = new();
+        private readonly Dictionary<string, byte[]> _files;
         private byte[]? _key;
         private byte[]? _salt;
         private byte[]? _iv;
         private string? _path;
 
-        /// <summary>
-        /// Path on disk of the underlying .misf file.
-        /// </summary>
         public string? Path => _path;
 
-        private FileVault() { }
+        private FileVault()
+        {
+            _files = new Dictionary<string, byte[]>(); // Initialize readonly field in the constructor
+        }
 
         public static FileVault CreateNew(string path, string password)
         {
@@ -79,19 +79,26 @@ namespace Cryptig.Core
                 }
             }
 
-            return new FileVault
+            var vault = new FileVault
             {
                 _path = path,
                 _salt = salt,
                 _iv = iv,
-                _key = key,
-                _files = files
+                _key = key
             };
+
+            foreach (var file in files)
+            {
+                vault._files.Add(file.Key, file.Value); // Populate readonly field using its instance
+            }
+
+            return vault;
         }
 
         public void AddFile(string filePath)
         {
-            string name = Path.GetFileName(filePath);
+            if (filePath == null) throw new ArgumentNullException(nameof(filePath)); // Fix potential null reference issue
+            string name = System.IO.Path.GetFileName(filePath); // Use fully qualified name to avoid ambiguity
             byte[] data = File.ReadAllBytes(filePath);
             _files[name] = data;
             Logger.Info($"File added to vault '{_path}': {name}");
@@ -105,9 +112,6 @@ namespace Cryptig.Core
 
         public IEnumerable<string> GetFileNames() => _files.Keys;
 
-        /// <summary>
-        /// Retrieves raw bytes of a stored file.
-        /// </summary>
         public byte[] GetFileData(string fileName)
         {
             return _files[fileName];
@@ -115,10 +119,12 @@ namespace Cryptig.Core
 
         public void ExtractAll(string directory)
         {
+            if (directory == null) throw new ArgumentNullException(nameof(directory)); // Ensure directory is not null
             Directory.CreateDirectory(directory);
             foreach (var (name, data) in _files)
             {
-                File.WriteAllBytes(Path.Combine(directory, name), data);
+                if (name == null) throw new ArgumentNullException(nameof(name)); // Ensure name is not null
+                File.WriteAllBytes(System.IO.Path.Combine(directory, name), data); // Use fully qualified name for Path.Combine
             }
             Logger.Info($"Vault '{_path}' extracted to '{directory}'");
         }
