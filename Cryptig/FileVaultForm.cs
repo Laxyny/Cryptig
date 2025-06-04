@@ -3,6 +3,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Windows.Forms;
+using Microsoft.VisualBasic;
 using Cryptig.Core;
 
 namespace Cryptig
@@ -17,6 +18,8 @@ namespace Cryptig
         private readonly Button _btnExtract;
         private readonly Button _btnOpen;
         private readonly Button _btnSave;
+        private readonly ContextMenuStrip _contextMenu;
+        private readonly PictureBox _preview;
 
         public FileVaultForm(FileVault vault, string username)
         {
@@ -48,7 +51,7 @@ namespace Cryptig
             {
                 Left = 20,
                 Top = 20,
-                Width = ClientSize.Width - 40,
+                Width = ClientSize.Width - 200,
                 Height = ClientSize.Height - 100,
                 Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right,
                 ReadOnly = true,
@@ -73,6 +76,22 @@ namespace Cryptig
                 }
             };
 
+            _preview = new PictureBox
+            {
+                Left = _dgvFiles.Right + 10,
+                Top = 20,
+                Width = 150,
+                Height = 150,
+                SizeMode = PictureBoxSizeMode.Zoom,
+                Anchor = AnchorStyles.Top | AnchorStyles.Right
+            };
+
+            _contextMenu = new ContextMenuStrip();
+            _contextMenu.Items.Add("Rename", null, (s, e) => RenameSelectedFile());
+            _contextMenu.Items.Add("Delete", null, (s, e) => BtnRemove_Click(s, e));
+            _dgvFiles.ContextMenuStrip = _contextMenu;
+            _dgvFiles.SelectionChanged += (s, e) => UpdatePreview();
+
             _btnAdd = new Button { Text = "Add File", Left = 20, Top = _dgvFiles.Bottom + 10, Width = 90 };
             _btnRemove = new Button { Text = "Remove File", Left = _btnAdd.Right + 10, Top = _dgvFiles.Bottom + 10, Width = 90 };
             _btnExtract = new Button { Text = "Extract All", Left = _btnRemove.Right + 10, Top = _dgvFiles.Bottom + 10, Width = 90 };
@@ -85,14 +104,17 @@ namespace Cryptig
             _btnOpen.Click += BtnOpen_Click;
             _btnSave.Click += BtnSave_Click;
 
-            Controls.AddRange(new Control[] { _dgvFiles, _btnAdd, _btnRemove, _btnExtract, _btnOpen, _btnSave });
+            Controls.AddRange(new Control[] { _dgvFiles, _preview, _btnAdd, _btnRemove, _btnExtract, _btnOpen, _btnSave });
 
             LoadFiles();
         }
 
         private void LoadFiles()
         {
-            _dgvFiles.DataSource = _vault.GetFileNames().Select(n => new { Name = n }).ToList();
+            _dgvFiles.DataSource = _vault.GetFileInfos()
+                .Select(f => new { f.Name, Size = f.Size, Type = f.Type })
+                .ToList();
+            UpdatePreview();
         }
 
         private void BtnOpen_Click(object? sender, EventArgs e)
@@ -121,6 +143,19 @@ namespace Cryptig
             }
         }
 
+        private void RenameSelectedFile()
+        {
+            if (_dgvFiles.SelectedRows.Count == 0)
+                return;
+            string oldName = _dgvFiles.SelectedRows[0].Cells[0].Value.ToString() ?? string.Empty;
+            string newName = Microsoft.VisualBasic.Interaction.InputBox("New name", "Rename", oldName);
+            if (!string.IsNullOrWhiteSpace(newName) && newName != oldName)
+            {
+                _vault.RenameFile(oldName, newName);
+                LoadFiles();
+            }
+        }
+
         private void BtnExtract_Click(object? sender, EventArgs e)
         {
             using FolderBrowserDialog dlg = new FolderBrowserDialog();
@@ -128,6 +163,26 @@ namespace Cryptig
             {
                 _vault.ExtractAll(dlg.SelectedPath);
                 MessageBox.Show("Files extracted.");
+            }
+        }
+
+        private void UpdatePreview()
+        {
+            _preview.Image = null;
+            if (_dgvFiles.SelectedRows.Count == 0)
+                return;
+            string name = _dgvFiles.SelectedRows[0].Cells[0].Value.ToString() ?? string.Empty;
+            if (string.IsNullOrEmpty(name)) return;
+            string ext = System.IO.Path.GetExtension(name).ToLowerInvariant();
+            if (ext == ".png" || ext == ".jpg" || ext == ".jpeg" || ext == ".bmp" || ext == ".gif")
+            {
+                try
+                {
+                    byte[] data = _vault.GetFileData(name);
+                    using var ms = new MemoryStream(data);
+                    _preview.Image = System.Drawing.Image.FromStream(ms);
+                }
+                catch {}
             }
         }
 

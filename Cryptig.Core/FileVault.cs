@@ -15,28 +15,31 @@ namespace Cryptig.Core
     public class FileVault
     {
         private const string MagicHeader = "MISF";
-        private const byte Version = 1;
+        private const byte Version = 2;
 
         private readonly Dictionary<string, byte[]> _files;
         private byte[]? _key;
         private byte[]? _salt;
         private byte[]? _iv;
         private string? _path;
+        private string _owner = string.Empty;
 
         public string? Path => _path;
+        public string Owner => _owner;
 
         private FileVault()
         {
-            _files = new Dictionary<string, byte[]>(); // Initialize readonly field in the constructor
+            _files = new Dictionary<string, byte[]>();
         }
 
-        public static FileVault CreateNew(string path, string password)
+        public static FileVault CreateNew(string path, string password, string owner)
         {
             var vault = new FileVault
             {
                 _salt = CryptoEngine.GenerateSalt(),
                 _iv = CryptoEngine.GenerateIv(),
-                _path = path
+                _path = path,
+                _owner = owner
             };
 
             vault._key = CryptoEngine.DeriveKey(password, vault._salt);
@@ -44,7 +47,7 @@ namespace Cryptig.Core
             return vault;
         }
 
-        public static FileVault Load(string path, string password)
+        public static FileVault Load(string path, string password, string expectedOwner = "")
         {
             using FileStream fs = new FileStream(path, FileMode.Open, FileAccess.Read);
             using BinaryReader reader = new BinaryReader(fs);
@@ -54,8 +57,18 @@ namespace Cryptig.Core
                 throw new InvalidDataException("Invalid file format.");
 
             byte version = reader.ReadByte();
-            if (version != Version)
+            string owner = string.Empty;
+            if (version == 2)
+            {
+                int ownerLen = reader.ReadByte();
+                owner = Encoding.UTF8.GetString(reader.ReadBytes(ownerLen));
+                if (!string.IsNullOrEmpty(expectedOwner) && !owner.Equals(expectedOwner, StringComparison.OrdinalIgnoreCase))
+                    throw new UnauthorizedAccessException("Vault owner mismatch.");
+            }
+            else if (version != 1)
+            {
                 throw new InvalidDataException("Unsupported file version.");
+            }
 
             byte[] salt = reader.ReadBytes(16);
             byte[] iv = reader.ReadBytes(12);
@@ -84,7 +97,8 @@ namespace Cryptig.Core
                 _path = path,
                 _salt = salt,
                 _iv = iv,
-                _key = key
+                _key = key,
+                _owner = owner
             };
 
             foreach (var file in files)
@@ -110,7 +124,25 @@ namespace Cryptig.Core
             Logger.Info($"File removed from vault '{_path}': {fileName}");
         }
 
+        public void RenameFile(string oldName, string newName)
+        {
+            if (!_files.ContainsKey(oldName)) return;
+            byte[] data = _files[oldName];
+            _files.Remove(oldName);
+            _files[newName] = data;
+            Logger.Info($"File renamed in vault '{_path}': {oldName} -> {newName}");
+        }
+
         public IEnumerable<string> GetFileNames() => _files.Keys;
+
+        public IEnumerable<(string Name, long Size, string Type)> GetFileInfos()
+        {
+            foreach (var kvp in _files)
+            {
+                string type = System.IO.Path.GetExtension(kvp.Key);
+                yield return (kvp.Key, kvp.Value.Length, type);
+            }
+        }
 
         public byte[] GetFileData(string fileName)
         {
@@ -151,6 +183,12 @@ namespace Cryptig.Core
 
             writer.Write(Encoding.ASCII.GetBytes(MagicHeader));
             writer.Write(Version);
+            if (Version == 2)
+            {
+                byte[] ownerBytes = Encoding.UTF8.GetBytes(_owner);
+                writer.Write((byte)ownerBytes.Length);
+                writer.Write(ownerBytes);
+            }
             writer.Write(_salt!);
             writer.Write(_iv);
             writer.Write(tag);

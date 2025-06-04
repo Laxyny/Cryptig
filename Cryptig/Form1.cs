@@ -335,19 +335,18 @@ namespace Cryptig
 
         private void CreateFileVault_Click(object? sender, EventArgs e)
         {
-            using SaveFileDialog dlg = new SaveFileDialog
+            string path = System.IO.Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+                "Cryptig", "filevaults", $"vault_{_username}.misf"
+            );
+
+            if (File.Exists(path))
             {
-                Filter = "File Vault (*.misf)|*.misf",
-                Title = "Create File Vault"
-            };
-
-            if (dlg.ShowDialog() != DialogResult.OK)
+                MessageBox.Show("File vault already exists for this user.");
                 return;
+            }
 
-            string path = dlg.FileName;
-
-            if (string.IsNullOrWhiteSpace(path))
-                return;
+            Directory.CreateDirectory(System.IO.Path.GetDirectoryName(path)!);
 
             string password = PromptForPassword();
             if (string.IsNullOrEmpty(password))
@@ -355,7 +354,7 @@ namespace Cryptig
 
             try
             {
-                var vault = FileVault.CreateNew(path, password);
+                var vault = FileVault.CreateNew(path, password, _username);
                 using var fvForm = new FileVaultForm(vault, _username);
                 fvForm.ShowDialog(this);
             }
@@ -367,14 +366,16 @@ namespace Cryptig
 
         private void OpenFileVault_Click(object? sender, EventArgs e)
         {
-            using OpenFileDialog dlg = new OpenFileDialog
-            {
-                Filter = "File Vault (*.misf)|*.misf",
-                Title = "Open File Vault"
-            };
+            string path = System.IO.Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+                "Cryptig", "filevaults", $"vault_{_username}.misf"
+            );
 
-            if (dlg.ShowDialog() != DialogResult.OK)
+            if (!File.Exists(path))
+            {
+                MessageBox.Show("File vault not found for this user.");
                 return;
+            }
 
             string password = PromptForPassword();
             if (string.IsNullOrEmpty(password))
@@ -382,7 +383,7 @@ namespace Cryptig
 
             try
             {
-                var vault = FileVault.Load(dlg.FileName, password);
+                var vault = FileVault.Load(path, password, _username);
                 using var fvForm = new FileVaultForm(vault, _username);
                 fvForm.ShowDialog(this);
             }
