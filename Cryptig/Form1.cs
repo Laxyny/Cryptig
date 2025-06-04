@@ -71,11 +71,13 @@ namespace Cryptig
             ToolStripMenuItem lockItem = new ToolStripMenuItem("Lock Vault");
             ToolStripMenuItem createFVItem = new ToolStripMenuItem("Create File Vault");
             ToolStripMenuItem openFVItem = new ToolStripMenuItem("Open File Vault");
+            ToolStripMenuItem twoFactorItem = new ToolStripMenuItem("Two-Factor Setup");
             importItem.Click += ImportVault_Click;
             exportItem.Click += ExportVault_Click;
             lockItem.Click += (s, e) => LockVault();
             createFVItem.Click += CreateFileVault_Click;
             openFVItem.Click += OpenFileVault_Click;
+            twoFactorItem.Click += TwoFactorItem_Click;
 
             menuStrip.Dock = DockStyle.Top;
             fileMenu.DropDownItems.Add(importItem);
@@ -84,6 +86,7 @@ namespace Cryptig
             fileMenu.DropDownItems.Add(new ToolStripSeparator());
             fileMenu.DropDownItems.Add(createFVItem);
             fileMenu.DropDownItems.Add(openFVItem);
+            fileMenu.DropDownItems.Add(twoFactorItem);
             menuStrip.Items.Add(fileMenu);
 
             ToolStripMenuItem helpMenu = new ToolStripMenuItem("Help");
@@ -673,6 +676,32 @@ namespace Cryptig
                 }
             }
             Show();
+        }
+
+        private void TwoFactorItem_Click(object? sender, EventArgs e)
+        {
+            if (_vault == null) return;
+
+            if (string.IsNullOrEmpty(_vault.Data.TwoFactorSecret))
+            {
+                string secret = TwoFactorAuth.GenerateSecret();
+                using var setup = new TwoFactorSetupForm(secret);
+                if (setup.ShowDialog(this) == DialogResult.OK && setup.Confirmed)
+                {
+                    _vault.Data.TwoFactorSecret = secret;
+                    _vault.Save();
+                    MessageBox.Show("Two-factor authentication enabled.");
+                }
+            }
+            else
+            {
+                if (MessageBox.Show("Disable two-factor authentication?", "Confirm", MessageBoxButtons.YesNo) == DialogResult.Yes)
+                {
+                    _vault.Data.TwoFactorSecret = null;
+                    _vault.Save();
+                    MessageBox.Show("Two-factor authentication disabled.");
+                }
+            }
         }
 
         private void Form1_KeyDown(object sender, KeyEventArgs e)
