@@ -25,6 +25,20 @@ All data is locally stored, using robust cryptography (AES-256-GCM + Argon2id), 
 - Local-only storage for maximum privacy
 - Future cloud sync/export with encryption in mind
 - Built-in password generator & password strength checker
+- Encrypted `FileVault` for securing any type of file
+
+### FileVault Overview
+
+The `FileVault` format allows storing arbitrary files in a single encrypted
+container. Internally, the files are zipped together and protected with
+Argon2id-derived keys and AES-256-GCM encryption. Only users with the correct
+master password can decrypt or view the contents.
+
+This feature is experimental and offers a simple way to keep documents or
+images private alongside your passwords.
+
+From the main window, use **File > Create File Vault** or **File > Open File Vault**
+to manage encrypted containers for your personal files.
 
 ---
 
