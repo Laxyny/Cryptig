@@ -69,14 +69,21 @@ namespace Cryptig
             ToolStripMenuItem importItem = new ToolStripMenuItem("Import Vault");
             ToolStripMenuItem exportItem = new ToolStripMenuItem("Export Vault");
             ToolStripMenuItem lockItem = new ToolStripMenuItem("Lock Vault");
+            ToolStripMenuItem createFVItem = new ToolStripMenuItem("Create File Vault");
+            ToolStripMenuItem openFVItem = new ToolStripMenuItem("Open File Vault");
             importItem.Click += ImportVault_Click;
             exportItem.Click += ExportVault_Click;
             lockItem.Click += (s, e) => LockVault();
+            createFVItem.Click += CreateFileVault_Click;
+            openFVItem.Click += OpenFileVault_Click;
 
             menuStrip.Dock = DockStyle.Top;
             fileMenu.DropDownItems.Add(importItem);
             fileMenu.DropDownItems.Add(exportItem);
             fileMenu.DropDownItems.Add(lockItem);
+            fileMenu.DropDownItems.Add(new ToolStripSeparator());
+            fileMenu.DropDownItems.Add(createFVItem);
+            fileMenu.DropDownItems.Add(openFVItem);
             menuStrip.Items.Add(fileMenu);
 
             ToolStripMenuItem helpMenu = new ToolStripMenuItem("Help");
@@ -324,6 +331,86 @@ namespace Cryptig
                     MessageBox.Show("Export failed: " + ex.Message);
                 }
             }
+        }
+
+        private void CreateFileVault_Click(object? sender, EventArgs e)
+        {
+            using SaveFileDialog dlg = new SaveFileDialog
+            {
+                Filter = "File Vault (*.misf)|*.misf",
+                Title = "Create File Vault"
+            };
+
+            if (dlg.ShowDialog() != DialogResult.OK)
+                return;
+
+            string path = dlg.FileName;
+
+            if (string.IsNullOrWhiteSpace(path))
+                return;
+
+            string password = PromptForPassword();
+            if (string.IsNullOrEmpty(password))
+                return;
+
+            try
+            {
+                var vault = FileVault.CreateNew(path, password);
+                using var fvForm = new FileVaultForm(vault);
+                fvForm.ShowDialog(this);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Failed to create vault: " + ex.Message);
+            }
+        }
+
+        private void OpenFileVault_Click(object? sender, EventArgs e)
+        {
+            using OpenFileDialog dlg = new OpenFileDialog
+            {
+                Filter = "File Vault (*.misf)|*.misf",
+                Title = "Open File Vault"
+            };
+
+            if (dlg.ShowDialog() != DialogResult.OK)
+                return;
+
+            string password = PromptForPassword();
+            if (string.IsNullOrEmpty(password))
+                return;
+
+            try
+            {
+                var vault = FileVault.Load(dlg.FileName, password);
+                using var fvForm = new FileVaultForm(vault);
+                fvForm.ShowDialog(this);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Failed to open vault: " + ex.Message);
+            }
+        }
+
+        private static string PromptForPassword()
+        {
+            using Form prompt = new Form
+            {
+                Width = 300,
+                Height = 150,
+                Text = "Enter Vault Password",
+                FormBorderStyle = FormBorderStyle.FixedDialog,
+                StartPosition = FormStartPosition.CenterParent
+            };
+
+            TextBox txtPwd = new TextBox { Left = 20, Top = 20, Width = 240, UseSystemPasswordChar = true };
+            Button btnOk = new Button { Text = "OK", Left = 20, Top = txtPwd.Bottom + 10, Width = 240 };
+            btnOk.Click += (s, e) => prompt.DialogResult = DialogResult.OK;
+
+            prompt.Controls.AddRange(new Control[] { txtPwd, btnOk });
+            prompt.AcceptButton = btnOk;
+
+            return prompt.ShowDialog() == DialogResult.OK ? txtPwd.Text : string.Empty;
         }
 
         private void LoadVault()
